@@ -1,0 +1,14 @@
+{
+  "name": "eventbrite-attendee-sweep",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "getContacts": "node getAllContacts.js",
+    "sweepContacts": "node voidCustomAttributes.js"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "node-fetch": "^2.6.1"
+  }
+}
