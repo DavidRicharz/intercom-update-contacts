@@ -1,7 +1,7 @@
-const fetch = require("node-fetch");
-const fs = require("fs");
-
-require("dotenv").config();
+import fetch from "node-fetch";
+import fs from "fs";
+import pMap, { pMapSkip } from "p-map";
+import "dotenv/config";
 
 if (
   !process.env.INTERCOM_ACCESS_TOKEN_PRODUCTION &&
@@ -14,7 +14,6 @@ if (
 }
 const baseUrl = `https://api.intercom.io/`;
 const token = process.env.INTERCOM_ACCESS_TOKEN_PRODUCTION;
-
 const requestOpts = {
   method: "PUT",
   headers: {
@@ -24,6 +23,7 @@ const requestOpts = {
     "Intercom-Version": "2.9",
   },
 };
+const progressSteps = 1000; // set to number of requests that should run inbetween console log feedback
 
 /**
  *
@@ -32,11 +32,24 @@ const requestOpts = {
  * @returns
  */
 const updateContact = async (contactID, updateConfig) => {
-  // call Intercom API
-  let url = baseUrl + "contacts/" + contactID; // update endpoint
-  const response = await fetch(url, updateConfig);
-  console.log(response.statusText);
-  return response;
+  try {
+    // call Intercom API
+    let url = baseUrl + "contacts/" + contactID; // update endpoint
+    const response = await fetch(url, updateConfig);
+    if (!response.ok) {
+      console.error(
+        `Request to Intercom API failed with ${response.status} : ${response.statusText} for Intercom Contact ID ${contactID}`
+      );
+    }
+    saveResult(contactID, response.ok);
+    return response;
+  } catch (error) {
+    console.error(
+      `Error requesting Intercom user update for id ${contactID} : ${error.message}`
+    );
+    saveResult(contactID, false);
+    return pMapSkip; // skip the element that errored
+  }
 };
 
 /**
@@ -69,63 +82,40 @@ const sweep = async (contactIDs) => {
   console.log("%cRequest is: ", "color:yellow; background:green;");
   console.log(requestOpts);
 
-  let successes = [];
-  let errors = [];
   let counter = 0;
-
-  for (const contact of contactIDs) {
-    counter++;
-    let response = await updateContact(contact, requestOpts);
-    let body = await response.json();
-
-    if (!response.ok) {
-      console.error(
-        `Request to Intercom API failed with ${response.status} : ${response.statusText} for Intercom Contact ID ${contact}`
-      );
-      errors.push(
-        JSON.stringify({ contact_id: contact, error: response.statusText })
-      );
-    } else {
-      successes.push(JSON.stringify(body?.id));
-    }
-
-    // store and reset intermedia results
-    if (counter % 5 == 0) {
-      console.log(`Upated ${counter} of ${contactIDs.length} contacts.`);
-      trackResults(successes, errors);
-      successes = errors = []; // flush
-    }
-  }
+  pMap(
+    contactIDs,
+    async (contact) => {
+      const result = await updateContact(contact, requestOpts);
+      counter++;
+      if (counter % progressSteps === 0) {
+        console.log(`Upated ${counter} of ${contactIDs.length} contacts.`);
+      }
+      return result;
+    },
+    { concurrency: 13 }
+  );
 };
 
 /**
  * Write results to hard drive to verify results
- * @param {string[]} result
- * @param {Object[]} errors
+ * @param {string} id
+ * @param {boolean} wasSuccessful
  */
-function trackResults(result, errors) {
+function saveResult(id, wasSuccessful) {
+  const file = wasSuccessful
+    ? "./res/sweep_result.txt"
+    : "./res/sweep_result_errors.txt";
   //Write prettified output to file (for testing)
-  fs.appendFile("./res/sweep_result.csv", result.join(","), (err) => {
-    if (err) {
-      return console.error(err);
-    } else {
-      console.log("Intercom ids swept saved in sweep_result.csv");
-    }
-  });
-
-  fs.appendFile("./res/sweep_result_errors.csv", errors.join(","), (err) => {
-    if (err) {
-      return console.error(err);
-    } else {
-      console.log("Failed requests saved in sweep_result_errors.csv");
-    }
+  fs.appendFile(file, '"' + id + '", ', (err) => {
+    if (err) return console.error(err);
   });
 }
 
 // run sweep to reset custom attributes
 (async () => {
   const contactIDs = JSON.parse(
-    fs.readFileSync("./res/sampleContacts.txt", "utf8")
+    fs.readFileSync("./res/allContacts.txt", "utf8")
   );
   sweep(contactIDs);
 })();

@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "getContacts": "node getAllContacts.js",
     "sweepContacts": "node voidCustomAttributes.js"
   },
   "dependencies": {
+    "@types/got": "^9.6.12",
     "dotenv": "^10.0.0",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "p-map": "^7.0.1"
   }
 }
