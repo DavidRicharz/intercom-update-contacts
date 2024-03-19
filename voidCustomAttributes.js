@@ -93,7 +93,7 @@ const sweep = async (contactIDs) => {
       }
       return result;
     },
-    { concurrency: 13 }
+    { concurrency: 15 }
   );
 };
 

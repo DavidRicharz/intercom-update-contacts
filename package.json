@@ -1,7 +1,6 @@
 {
-  "name": "eventbrite-attendee-sweep",
+  "name": "intercom-contact-sweep",
   "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT",
   "type": "module",
   "scripts": {
