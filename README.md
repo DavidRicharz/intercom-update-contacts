@@ -16,8 +16,9 @@ Install packages
 
 ## Run
 
-`npm getContacts` - Get a list of all contact ids associated with your workspace
-`npm sweepContacts` - Update the list of contacts based on defined request
+`npm run getContacts` - Get a list of all contact ids associated with your workspace
+
+`npm run sweepContacts` - Update the list of contacts based on defined request
 
 ## Usage
 
@@ -34,4 +35,5 @@ requestOpts.body = JSON.stringify({
 ## Rate limits
 
 https://developers.intercom.com/docs/references/rest-api/errors/rate-limiting/
+
 # intercom-update-contacts

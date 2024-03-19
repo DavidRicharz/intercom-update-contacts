@@ -1,7 +1,6 @@
-const fetch = require("node-fetch");
-const fs = require("fs");
-
-require("dotenv").config();
+import fetch from "node-fetch";
+import fs from "fs";
+import "dotenv/config";
 
 if (
   !process.env.INTERCOM_ACCESS_TOKEN_PRODUCTION &&
@@ -25,6 +24,18 @@ const requestOpts = {
   },
 };
 
+// A list of custom_attributes to filter contacts by. If all attributes are undefined the contact is dropped
+const filter = [
+  "funnel_phase",
+  "inactive",
+  "active",
+  "awareness",
+  "exploration",
+  "application",
+  "selection",
+  "employment",
+];
+
 const fetchContacts = async (allContactIds = [], cursor) => {
   try {
     // call Intercom API
@@ -42,7 +53,6 @@ const fetchContacts = async (allContactIds = [], cursor) => {
         `http response failed with ${res.status} : ${res.statusText}`
       );
     const body = await res.json();
-
     const { data, pages } = body;
     const { page, total_pages } = pages;
     const starting_after = pages?.next?.starting_after; // starting after contains the next x results
@@ -50,7 +60,9 @@ const fetchContacts = async (allContactIds = [], cursor) => {
 
     const contact_ids = data
       .filter(
-        (contact) => contact.workspace_id === "sx32r71f" // filter by JC workspace id for jobs.ch [TEST]
+        (contact) =>
+          contact.workspace_id === "sx32r71f" && // filter by JC workspace id for jobs.ch [TEST]
+          hasAnyDefinedProperties(contact.custom_attributes, filter) // filter out any contact where all attributes defined in filter are undefined
       )
       .map((contact) => contact.id); // extract intercom contact id
 
@@ -76,6 +88,20 @@ const fetchContacts = async (allContactIds = [], cursor) => {
     console.error(e.message);
   }
 };
+
+/**
+ * Returns false if all properties of the provided list are undefined
+ * @param {*} object An object to check
+ * @param {string[]} propertiesToFilter A list of porperties to check for undefined value
+ * @returns {boolean}
+ */
+function hasAnyDefinedProperties(object, propertiesToFilter) {
+  if (propertiesToFilter.length === 0) return true;
+  const result = !propertiesToFilter.every(
+    (prop) => object[prop] === undefined || object[prop] === null
+  );
+  return result;
+}
 
 /**
  * Store all contact ids from last request on hard drive
